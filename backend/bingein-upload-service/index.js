@@ -4,9 +4,10 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 // Appwrite SDK imports
-const { Client, Storage, Databases } = require('node-appwrite');
+const { Client, Storage, Databases, Permission, Role } = require('node-appwrite');
 const { InputFile } = require('node-appwrite/file');
 
 const app = express();
@@ -14,14 +15,13 @@ app.use(cors());
 app.use(express.json());
 
 // Ensure uploads folder exists
-const fs = require('fs');
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
 // Configure Multer storage (storing files on local disk)
-const storage = multer.diskStorage({
+const storageConfig = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'uploads/'); // folder to store uploads temporarily
   },
@@ -30,7 +30,7 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + file.originalname);
   }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storageConfig });
 
 // Initialize Appwrite client
 const client = new Client()
@@ -54,11 +54,21 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     // Upload the file to Appwrite's bucket (replace bucketId with your bucket id)
     const bucketId = process.env.APPWRITE_BUCKET_ID;
     const inputFile = InputFile.fromPath(file.path, file.originalname);
-    const response = await appwriteStorage.createFile(bucketId, 'unique()', inputFile);
+
+    // Here we add permission so that the file is publicly readable.
+    const response = await appwriteStorage.createFile(
+      bucketId,
+      'unique()',
+      inputFile,
+      [
+        Permission.read(Role.any()), // this makes the file publicly readable
+      ]
+    );
+
     const fileId = response.$id;
     const fileUrl = `${process.env.APPWRITE_ENDPOINT}/storage/buckets/${bucketId}/files/${fileId}/view?project=${process.env.APPWRITE_PROJECT}`;
 
-    //Create a new document in Appwrite's "Videos" collection (replace collection and database IDs)
+    // Create a new document in Appwrite's "Videos" collection (replace collection and database IDs)
     const collectionId = process.env.APPWRITE_VIDEOS_COLLECTION_ID;
     const databaseId = process.env.APPWRITE_DATABASE_ID;
     const videoDocument = await databases.createDocument(
@@ -75,9 +85,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 
     // Respond with the created document's details
     res.status(200).json({
-      message: 'File uploaded .',
+      message: 'File uploaded successfully.',
       res: response,
-      videDocument: videoDocument,
+      videoDocument: videoDocument,
     });
   } catch (error) {
     console.error('Error uploading file:', error);
