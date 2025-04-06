@@ -4,7 +4,7 @@ import VideoPlayer from './components/VideoPlayer.jsx';
 
 function App() {
   // Replace this URL with your actual manifest URL
-  const [manifestUrl, setManifestUrl] = useState('https://cloud.appwrite.io/v1/storage/buckets/67ed51890012a802a879/files/67ed6035ebce33113fca/view?project=67ebf0bf000a36a967c1&mode=admin');
+  const [manifestUrl, setManifestUrl] = useState('https://cloud.appwrite.io/v1/storage/buckets/67ed51890012a802a879/files/67f22b12ba4dfcdec7b3/view?project=67ebf0bf000a36a967c1&mode=admin');
 
   return (
     <div>
